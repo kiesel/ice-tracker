@@ -3,6 +3,8 @@ package main
 import (
   "net/http"
   "fmt"
+  "os"
+  "encoding/csv"
   "io"
   "encoding/json"
   "time"
@@ -21,11 +23,21 @@ type JsonRecord struct {
 }
 
 func (this *JsonRecord) String() string {
-  return fmt.Sprintf("[%0.2f km/h @ {%0.5f,%0.5f}, time=%s]\n",
+  return fmt.Sprintf("[%0.2f km/h @ {%0.5f,%0.5f}, %s]\n",
     this.Speed,
     this.Longitude,
     this.Latitude,
     time.Unix(this.ServerTime / 1000, 0))
+}
+
+func (this *JsonRecord) ToSlice() []string {
+  return []string {
+    fmt.Sprintf("%0.3f", this.Speed),
+    fmt.Sprintf("%0.5f", this.Longitude),
+    fmt.Sprintf("%0.5f", this.Latitude),
+    fmt.Sprintf("%d", this.ServerTime),
+    fmt.Sprintf("%s", time.Unix(this.ServerTime / 1000, 0)),
+  }
 }
 
 
@@ -47,12 +59,35 @@ func main() {
     }
 
     fmt.Print(rec.String())
+    storeRecord(rec)
 
     if rec.Speed > maxSpeed {
       maxSpeed = rec.Speed
       fmt.Println("NEW RECORD!!!")
     }
 
+
     time.Sleep(5 * time.Second)
+  }
+}
+
+func storeRecord(record JsonRecord) {
+  f, err := os.OpenFile("ice-tracker.csv", os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
+
+  if err != nil {
+    fmt.Print(err.Error)
+    return
+  }
+
+  defer f.Close()
+  w := csv.NewWriter(f)
+  if err := w.Write(record.ToSlice()); err != nil {
+    fmt.Print(err)
+  }
+
+  w.Flush()
+
+  if err := w.Error(); err != nil {
+    fmt.Println(err)
   }
 }
