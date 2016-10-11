@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"text/tabwriter"
 	"time"
 )
 
@@ -40,18 +41,25 @@ func (this *JsonRecord) ToSlice() []string {
 	}
 }
 
+func (this *JsonRecord) Time() time.Time {
+	return time.Unix(this.ServerTime/1000, 0)
+}
+
 var filename = "ice-tracker.csv"
 var frequency int = 5
+var line = 0
+var printer = new(tabwriter.Writer)
+var lastSpeed = (float32)(0.0)
+var maxSpeed = (float32)(0.0)
 
 func init() {
 	flag.StringVar(&filename, "filename", "ice-tracker.csv", "Track to this file")
 	flag.IntVar(&frequency, "frequency", 5, "Retrieve values every n seconds")
+	printer.Init(os.Stdout, 0, 8, 2, '\t', 0)
 }
 
 func main() {
 	flag.Parse()
-
-	maxSpeed := ((float32)(0.0))
 
 	for {
 		next := time.Now().Add(time.Duration(frequency) * time.Second)
@@ -63,13 +71,8 @@ func main() {
 			continue
 		}
 
-		fmt.Print(rec.String())
+		printRecord(*rec)
 		storeRecord(*rec)
-
-		if rec.Speed > maxSpeed {
-			maxSpeed = rec.Speed
-			fmt.Println("NEW RECORD!!!")
-		}
 
 		// Try to achieve exact frequency timing
 		time.Sleep(next.Sub(time.Now()))
@@ -89,6 +92,39 @@ func fetchRecord() (*JsonRecord, error) {
 	}
 
 	return &rec, nil
+}
+
+func printRecord(record JsonRecord) {
+	if line%20 == 0 {
+		fmt.Fprintf(printer, "TIME\tSPEED\tLONGITUDE\tLATITUDE\tTREND\n")
+	}
+
+	trend := "="
+	if lastSpeed > record.Speed {
+		trend = "v"
+	} else if lastSpeed < record.Speed {
+		trend = "^"
+	}
+	lastSpeed = record.Speed
+
+	info := ""
+	if record.Speed > maxSpeed {
+		maxSpeed = record.Speed
+		info = "RECORD!"
+	}
+
+	fmt.Fprintf(printer, "%s\t%0.1f km/h\t%0.3f\t%0.3f\t%s\t%s\n",
+		record.Time(),
+		record.Speed,
+		record.Longitude,
+		record.Latitude,
+		trend,
+		info,
+	)
+
+	printer.Flush()
+
+	line++
 }
 
 func storeRecord(record JsonRecord) {
