@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"time"
@@ -40,33 +40,55 @@ func (this *JsonRecord) ToSlice() []string {
 	}
 }
 
+var filename = "ice-tracker.csv"
+var frequency int = 5
+
+func init() {
+	flag.StringVar(&filename, "filename", "ice-tracker.csv", "Track to this file")
+	flag.IntVar(&frequency, "frequency", 5, "Retrieve values every n seconds")
+}
+
 func main() {
+	flag.Parse()
+
 	maxSpeed := ((float32)(0.0))
 
 	for {
-		resp, err := http.Get(ENDPOINT)
-		if err != nil {
-			panic(err.Error())
-		}
+		next := time.Now().Add(time.Duration(frequency) * time.Second)
 
-		decoder := json.NewDecoder(resp.Body)
-		var rec JsonRecord
-		if err := decoder.Decode(&rec); err == io.EOF {
-			break
-		} else if err != nil {
-			panic(err.Error())
+		rec, err := fetchRecord()
+		if err != nil {
+			fmt.Println(err)
+			time.Sleep(1 * time.Second)
+			continue
 		}
 
 		fmt.Print(rec.String())
-		storeRecord(rec)
+		storeRecord(*rec)
 
 		if rec.Speed > maxSpeed {
 			maxSpeed = rec.Speed
 			fmt.Println("NEW RECORD!!!")
 		}
 
-		time.Sleep(5 * time.Second)
+		// Try to achieve exact frequency timing
+		time.Sleep(next.Sub(time.Now()))
 	}
+}
+
+func fetchRecord() (*JsonRecord, error) {
+	resp, err := http.Get(ENDPOINT)
+	if err != nil {
+		return nil, err
+	}
+
+	var rec JsonRecord
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(&rec); err != nil {
+		return nil, err
+	}
+
+	return &rec, nil
 }
 
 func storeRecord(record JsonRecord) {
