@@ -23,4 +23,4 @@ In $GOPATH/src/github.com/kiesel/ice-tracker:
 
 ## About
 
-This program was written while riding the ICE train to Paris (and back) on 2016-10-09 & -11.
+This program was written while riding the ICE train to Paris (and back) on 2016-10-09 & -11 in order to attend at [DotGo EU 2016](http://dotgo.eu/)
