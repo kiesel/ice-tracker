@@ -131,7 +131,7 @@ func storeRecord(record JsonRecord) {
 	f, err := os.OpenFile("ice-tracker.csv", os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
 
 	if err != nil {
-		fmt.Print(err.Error)
+		fmt.Print(err.Error())
 		return
 	}
 

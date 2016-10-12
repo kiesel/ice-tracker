@@ -7,7 +7,9 @@ Records information from "inflight" information system in DB ICE trains (publicl
 * current position (longitude, latitude)
 * connection status to internet
 
-amongst even more.
+amongst even more. This is what the original application looks like on a phone:
+
+![ICE Portal](ice-portal.jpg)
 
 This program requests the data in a given frequency (default: every 5 seconds) and both shows information on the terminal and records it in a .csv file.
 
